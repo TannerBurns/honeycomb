@@ -42,7 +42,7 @@ func (nk *NodeKey) ReadNodeStructure(hive *os.File, ts time.Time) (err error) {
 	if err != nil {
 		return
 	}
-	if fbuff[3] == 0x2c {
+	if fbuff[2] == 0x2c {
 		nk.IsRootKey = true
 	} else {
 		nk.IsRootKey = false
