@@ -19,7 +19,7 @@ type NodeKey struct {
 	ValuesCount       uint32    `json:"values_count"`
 	ValuesListOffset  uint32    `json:"valueslist_offset"`
 	NameLength        uint16    `json:"name_length"`
-	IsRootKey         bool      `json"isrootkey"`
+	IsRootKey         bool      `json:"isrootkey"`
 	ClassnameLength   uint16    `json:"classname_length"`
 	Name              string    `json:"name"`
 	ClassnameData     []byte    `json:"classname_data"`
@@ -55,12 +55,12 @@ func (nk *NodeKey) ReadNodeStructure(hive *os.File, ts time.Time) (err error) {
 	if err != nil {
 		return
 	}
-	nk.ParentOffset = binary.BigEndian.Uint32(fbuff)
+	nk.ParentOffset = binary.LittleEndian.Uint32(fbuff)
 	_, err = hive.Read(fbuff)
 	if err != nil {
 		return
 	}
-	nk.SubkeysCount = binary.BigEndian.Uint32(fbuff)
+	nk.SubkeysCount = binary.LittleEndian.Uint32(fbuff)
 	_, err = hive.Seek(4, 1)
 	if err != nil {
 		return
@@ -69,7 +69,7 @@ func (nk *NodeKey) ReadNodeStructure(hive *os.File, ts time.Time) (err error) {
 	if err != nil {
 		return
 	}
-	nk.LFRecordOffset = binary.BigEndian.Uint32(fbuff)
+	nk.LFRecordOffset = binary.LittleEndian.Uint32(fbuff)
 	_, err = hive.Seek(4, 1)
 	if err != nil {
 		return
@@ -78,22 +78,22 @@ func (nk *NodeKey) ReadNodeStructure(hive *os.File, ts time.Time) (err error) {
 	if err != nil {
 		return
 	}
-	nk.ValuesCount = binary.BigEndian.Uint32(fbuff)
+	nk.ValuesCount = binary.LittleEndian.Uint32(fbuff)
 	_, err = hive.Read(fbuff)
 	if err != nil {
 		return
 	}
-	nk.ValuesListOffset = binary.BigEndian.Uint32(fbuff)
+	nk.ValuesListOffset = binary.LittleEndian.Uint32(fbuff)
 	_, err = hive.Read(fbuff)
 	if err != nil {
 		return
 	}
-	nk.SecurityKeyOffset = binary.BigEndian.Uint32(fbuff)
+	nk.SecurityKeyOffset = binary.LittleEndian.Uint32(fbuff)
 	_, err = hive.Read(fbuff)
 	if err != nil {
 		return
 	}
-	nk.ClassnameOffset = binary.BigEndian.Uint32(fbuff)
+	nk.ClassnameOffset = binary.LittleEndian.Uint32(fbuff)
 	_, err = hive.Seek(startingOffset+68, 0)
 	if err != nil {
 		return
@@ -102,12 +102,12 @@ func (nk *NodeKey) ReadNodeStructure(hive *os.File, ts time.Time) (err error) {
 	if err != nil {
 		return
 	}
-	nk.NameLength = binary.BigEndian.Uint16(tbuff)
+	nk.NameLength = binary.LittleEndian.Uint16(tbuff)
 	_, err = hive.Read(tbuff)
 	if err != nil {
 		return
 	}
-	nk.ClassnameLength = binary.BigEndian.Uint16(tbuff)
+	nk.ClassnameLength = binary.LittleEndian.Uint16(tbuff)
 
 	buf := make([]byte, nk.NameLength)
 	_, err = hive.Read(buf)

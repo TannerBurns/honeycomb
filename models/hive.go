@@ -43,5 +43,7 @@ func (rh *RegistryHive) Parse() (err error) {
 	}
 	info, _ := os.Stat(rh.Filepath)
 	err = rh.RootKey.ReadNodeStructure(fin, info.ModTime())
+
+	rh.Ok = true
 	return
 }
