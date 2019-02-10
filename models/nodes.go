@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -34,7 +35,7 @@ func NewNodeKey(hive *os.File) (*NodeKey, error) {
 	if err != nil {
 		return nk, err
 	}
-	err = nk.ReadChildrenNodes(hive)
+	err = nk.ReadChildNodes(hive)
 	if err != nil {
 		return nk, err
 	}
@@ -135,75 +136,86 @@ func (nk *NodeKey) ReadNodeStructure(hive *os.File) (err error) {
 	}
 	nk.Name = string(buf)
 	_, err = hive.Seek(int64(nk.ClassnameOffset)+4100, 0)
+	if err != nil {
+		return
+	}
+	nbuf := make([]byte, nk.ClassnameLength)
+	_, err = hive.Read(nbuf)
+	if err != nil {
+		return
+	}
+	nk.ClassnameData = nbuf
 	return
 }
 
-func (nk *NodeKey) ReadChildrenNodes(hive *os.File) (err error) {
-	tbuf := make([]byte, 2)
-	fbuf := make([]byte, 4)
-	if int64(nk.LFRecordOffset) == -1 {
-		return
-	}
-	_, err = hive.Seek(4100+int64(nk.LFRecordOffset), 1)
-	if err != nil {
-		return
-	}
-	_, err = hive.Read(tbuf)
-	if err != nil {
-		return
-	}
-	if tbuf[0] == 0x72 && tbuf[1] == 0x69 {
-		tbuf2 := make([]byte, 2)
-		_, err = hive.Read(tbuf2)
+func (nk *NodeKey) ReadChildNodes(hive *os.File) (err error) {
+	if int(nk.LFRecordOffset) != -1 {
+		_, err = hive.Seek(4096+int64(nk.LFRecordOffset)+4, 0)
 		if err != nil {
 			return
 		}
-		count := binary.LittleEndian.Uint16(tbuf2)
-		for i := 0; i < int(count); i++ {
-			pos, err := hive.Seek(0, 1)
+		buf := make([]byte, 2)
+		_, err = hive.Read(buf)
+		if err != nil {
+			return
+		}
+		if buf[0] == 0x72 && buf[1] == 0x69 {
+			_, err = hive.Read(buf)
 			if err != nil {
-				return err
+				return
 			}
-			_, err = hive.Read(fbuf)
+			count := binary.LittleEndian.Uint16(buf)
+			for i := uint16(0); i < count; i++ {
+				pos, err := hive.Seek(0, 1)
+				if err != nil {
+					return err
+				}
+				buf2 := make([]byte, 4)
+				_, err = hive.Read(buf2)
+				if err != nil {
+					return err
+				}
+				offset := binary.LittleEndian.Uint32(buf2)
+				_, err = hive.Seek(4096+int64(offset)+4, 0)
+				if err != nil {
+					return err
+				}
+				_, err = hive.Read(buf)
+				if err != nil {
+					return err
+				}
+				if !(buf[0] == 0x6c && (buf[1] == 0x66 || buf[1] == 0x68)) {
+					cur, err := hive.Seek(0, 1)
+					if err != nil {
+						return err
+					}
+					sc := strconv.FormatInt(cur, 10)
+					err = errors.New("Bad LF/LH record at: " + sc)
+					return err
+				}
+				err = nk.ParseChildNodes(hive)
+				if err != nil {
+					return err
+				}
+				_, err = hive.Seek(pos+4, 0)
+				if err != nil {
+					return err
+				}
+			}
+		} else if buf[0] == 0x6c && (buf[1] == 0x66 || buf[1] == 0x68) {
+			err = nk.ParseChildNodes(hive)
 			if err != nil {
-				return err
+				return
 			}
-			offset := binary.LittleEndian.Uint32(fbuf)
-			_, err = hive.Seek(4100+int64(offset), 0)
-			if err != nil {
-				return err
-			}
-			_, err = hive.Read(tbuf2)
-			if err != nil {
-				return err
-			}
+		} else {
 			cur, err := hive.Seek(0, 1)
 			if err != nil {
 				return err
 			}
-			if tbuf2[0] != 0x6c && (tbuf2[1] == 0x66 || tbuf2[1] == 0x68) {
-				err = errors.New("Bad LF/LH record at: " + string(cur))
-				return err
-			}
-			err = nk.ParseChildNodes(hive)
-			if err != nil {
-				return err
-			}
-			_, err = hive.Seek(pos+4, 0)
-			if err != nil {
-				return err
-			}
-		}
-	} else if tbuf[0] == 0x6c && (tbuf[1] == 0x66 || tbuf[1] == 0x68) {
-		err = nk.ParseChildNodes(hive)
-		return
-	} else {
-		cur, err := hive.Seek(0, 1)
-		if err != nil {
+			sc := strconv.FormatInt(cur, 10)
+			err = errors.New("Bad LF/LH/RI record at: " + sc)
 			return err
 		}
-		err = errors.New("Bad LF/LH/RI record at: " + string(cur))
-		return err
 	}
 	return
 }
