@@ -17,10 +17,7 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = rh.Parse()
-	if err != nil {
-		fmt.Println(err)
-	}
+	rh.Parse()
 	d, err := json.MarshalIndent(rh, "", "    ")
 	fmt.Println(string(d))
 }
